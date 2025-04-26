@@ -71,6 +71,7 @@ function getSecret(points: point[], prime: number) : number {
 }
 
 function modInverse(a: number, p: number) : number {
+    if (a < 0) a += p;
     let m0 = p, t, q;
     let x0 = 0, x1 = 1;
     if (p == 1) return 0;
