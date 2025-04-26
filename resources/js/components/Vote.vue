@@ -124,7 +124,6 @@ onMounted(async () => {
     console.log("shares", shares);
     const secret = getSecret(shares, prime);
     console.log("secret", secret);
-    console.log("modinv", modInverse(3, 7));
 
     // key gen, enc, dec
     const message = String(myScore);
