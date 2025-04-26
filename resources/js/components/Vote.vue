@@ -26,9 +26,7 @@ class point {
         this.y = y
     }
 }
-function mod(a: number, p: number): number {
-  return ((a % p) + p) % p;
-}
+
 function calcPolyValue(x: number, coefficients: number[], prime: number) : number {
     let res = 0
     let base = 1;
@@ -62,14 +60,14 @@ function getSecret(points: point[], prime: number) : number {
         for (let ii = 0; ii < points.length; ii++) {
             if (i !== ii) {
                 // 常に正の剰余にするため、mod() を使う
-                base *= mod(-points[ii].x, prime) * modInverse(x_i - points[ii].x, prime);
-                base = mod(base, prime);
+                base *= (prime-points[ii].x) * modInverse(x_i - points[ii].x, prime);
+                base %= prime;
             }
         }
         secret += y_i * base;
-        secret = mod(secret, prime);
+        secret %= prime ;
     }
-    return mod(secret, prime);
+    return secret % prime;
 }
 
 function modInverse(a: number, p: number) : number {
