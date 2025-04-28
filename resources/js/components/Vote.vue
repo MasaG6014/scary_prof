@@ -3,13 +3,19 @@
     <h1>Voting Page</h1>
     <p>Generated Keys:</p>
     <pre>{{ keys }}</pre>
+    <p>scores</p>
+    <h1>Text Field Example</h1>
+    <label for="myInput">Your Input:</label>
+    <input id="myInput" type="text" v-model="userInput" placeholder="Type something..." />
+    <button @click="handleSubmit">Submit</button>
+    <p>You entered: {{ userOutput }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import * as openpgp from 'openpgp'
-import { format } from 'crypto-js'
+import { ref, onMounted } from 'vue';
+import * as openpgp from 'openpgp';
+import axios from 'axios';
 
 // 鍵生成のオプションを定義
 const keyOptions = {
@@ -114,23 +120,37 @@ async function decryptedMessage(cipher: string, privateKey: openpgp.PrivateKey) 
     return plain;
 }
 
+const userInput = ref('') // ユーザーの入力を格納する変数
+const userOutput = ref('') // ユーザーのoutputを表示する変数
 
-onMounted(async () => {
+function handleSubmit() {
+  // ユーザーが入力した値を処理する関数
   try {
-    const myScore = 74;
+    const myScore = Number(userInput.value);
     const numOfuser = 10;
     const prime = 10007;
     const shares = getShares(myScore, numOfuser, prime);
     console.log("shares", shares);
     const secret = getSecret(shares, prime);
     console.log("secret", secret);
+    userOutput.value = [shares, secret] // 入力値をoutputに表示
+    console.log('Submitted:', userOutput.value)
+  }catch (error) {
+    console.error('Error in handleSubmit:', error)
+  }
+}
+
+onMounted(async () => {
+  axios.post('/api/vote/access').then(response => console.log(response.data)).catch(error => console.error(error));
+  try {
+    userOutput.value = '0'
 
     // key gen, enc, dec
-    const message = String(myScore);
+    // const message = String(myScore);
     const keys = await genKeys();
-    // console.log("publicKey", keys.publicKey);
-    const encrypted = await encryptedMessage(message, keys.publicKey);
-    const decrypted = await decryptedMessage(encrypted, keys.privateKey);
+    // // console.log("publicKey", keys.publicKey);
+    // const encrypted = await encryptedMessage(message, keys.publicKey);
+    // const decrypted = await decryptedMessage(encrypted, keys.privateKey);
   } catch (error) {
     console.error('vote error', error)
   }

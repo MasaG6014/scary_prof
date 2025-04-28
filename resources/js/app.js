@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 
 const routes = [
+    { path: '/hello', component: () => import('./components/HelloMessage.vue') },
     { path: '/', component: () => import('./components/Home.vue') },
     { path: '/vote', component: () => import('./components/Vote.vue') },
     { path: '/manage', component: () => import('./components/Manage.vue') },
