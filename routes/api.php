@@ -16,3 +16,13 @@ Route ::get('/vote/count', function () {
     $count = Redis::get('vote:access');
     return response()->json(['count' => $count]);
 });
+
+Route::post('/vote/leave', function () {
+    Redis::decr('vote:access');
+    return response()->json(['status' => 'ok']);
+});
+
+Route::post('manage/reset', function () {
+    Redis::set('vote:access', 0);
+    return response()->json(['status' => 'ok']);
+});

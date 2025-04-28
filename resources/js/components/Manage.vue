@@ -3,6 +3,7 @@
         <h1>Managing page</h1>
         <p>manage your vote</p>
         <p>number of voter : {{ voterNum }}</p>
+        <button @click="resetNum">Reset</button>
     </div>
 </template>
 
@@ -18,6 +19,16 @@ function fetchVoterNum() {
         })
         .catch(error => {
             console.error('Error fetching voter number:', error);
+        });
+}
+function resetNum() {
+    axios.post('/api/manage/reset')
+        .then(response => {
+            console.log('Voter number reset:', response.data);
+            fetchVoterNum();
+        })
+        .catch(error => {
+            console.error('Error resetting voter number:', error);
         });
 }
 

@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted , onBeforeUnmount} from 'vue';
 import * as openpgp from 'openpgp';
 import axios from 'axios';
 
@@ -154,5 +154,11 @@ onMounted(async () => {
   } catch (error) {
     console.error('vote error', error)
   }
+})
+
+onBeforeUnmount(() => {
+  axios.post('/api/vote/leave').then(response => console.log(response.data)).catch(error => console.error(error));
+  // コンポーネントがアンマウントされる前に実行する処
+  console.log('Component is about to be unmounted')
 })
 </script>
