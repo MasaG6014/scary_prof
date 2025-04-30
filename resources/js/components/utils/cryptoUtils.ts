@@ -84,7 +84,8 @@ export async function genKeys() {
 export async function encryptedMessage(message: string, publicKey: openpgp.PublicKey) {
     const options = {
         message: await openpgp.createMessage({ text: message }), // plaintext as Message object
-        encryptionKeys: await openpgp.readKey({ armoredKey: publicKey.armor() }) // for encryption
+        encryptionKeys: await openpgp.readKey({ armoredKey: publicKey.armor() }), // for encryption
+        armor: true
     }
     const cipher = await openpgp.encrypt(options);
     // console.log("Encrypted message:", cipher);
@@ -94,9 +95,10 @@ export async function encryptedMessage(message: string, publicKey: openpgp.Publi
 export async function decryptedMessage(cipher: string, privateKey: openpgp.PrivateKey) {
     const options: openpgp.DecryptOptions = {
         message: await openpgp.readMessage({ armoredMessage: cipher }), // parse encrypted message
-        decryptionKeys: await openpgp.readPrivateKey({ armoredKey: privateKey.armor() }) // for decryption
+        decryptionKeys: await openpgp.readPrivateKey({ armoredKey: privateKey.armor() }), // for decryption
+        format: 'utf8' // output as armored
     }
     const plain = await openpgp.decrypt(options);
     // console.log("Decrypted message:", plain);
-    return plain;
+    return plain.data;
 }
