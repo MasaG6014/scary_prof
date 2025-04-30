@@ -3,12 +3,17 @@
     <h1>Voting Page</h1>
     <p>Generated Keys:</p>
     <pre>{{ keys }}</pre>
-    <p>scores</p>
-    <h1>Text Field Example</h1>
-    <label for="myInput">Your Input:</label>
-    <input id="myInput" type="text" v-model="userInput" placeholder="Type something..." />
-    <button @click="handleSubmit">Submit</button>
-    <p>You entered: {{ userOutput }}</p>
+    <h1>{{ state }}</h1>
+    <div v-if="isStarted == 1">
+      <label for="myInput">怖さ度を入力</label>
+      <input id="myInput" type="text" v-model="userInput" placeholder="Input score..." />
+      <button @click="handleSubmit">Submit</button>
+    </div>
+    <button v-if="isTallyReady == 1" @click="handleTally">Tally</button>
+    <div v-if="isTallyOver == 1">
+      <p>投票が終了しました</p>
+      <p>result: {{ result }}</p>
+    </div>
   </div>
 </template>
 
@@ -16,6 +21,8 @@
 import { ref, onMounted , onBeforeUnmount} from 'vue';
 import * as openpgp from 'openpgp';
 import axios from 'axios';
+
+const PRIME = 10007;
 
 // 鍵生成のオプションを定義
 const keyOptions = {
@@ -121,33 +128,135 @@ async function decryptedMessage(cipher: string, privateKey: openpgp.PrivateKey) 
 }
 
 const userInput = ref('') // ユーザーの入力を格納する変数
-const userOutput = ref('') // ユーザーのoutputを表示する変数
+const result = ref('') // ユーザーのoutputを表示する変数
+let state = ref('')
+let isTallyReady = ref(0)
+let isTallyOver = ref(0)
 
-function handleSubmit() {
+async function handleSubmit() {
   // ユーザーが入力した値を処理する関数
   try {
+    let pkList = [];
+    await axios.get('/api/vote/getPkList')
+      .then(response => {pkList = response.data.pkList;console.log('successfully got pkList')})
+      .catch(error => console.error(error));
     const myScore = Number(userInput.value);
-    const numOfuser = 10;
-    const prime = 10007;
-    const shares = getShares(myScore, numOfuser, prime);
-    console.log("shares", shares);
-    const secret = getSecret(shares, prime);
-    console.log("secret", secret);
-    userOutput.value = [shares, secret] // 入力値をoutputに表示
-    console.log('Submitted:', userOutput.value)
+    const numOfuser = pkList.length;
+    const shares = getShares(myScore, numOfuser+1, PRIME);
+    console.log("create shares", shares);
+    let sharesList = [];
+    for (let i = 0; i < numOfuser; i++) {
+      const encryptedX = await encryptedMessage(shares[i+1].x.toString(), pkList[i]);
+      const encryptedY = await encryptedMessage(shares[i+1].y.toString(), pkList[i]);
+      const share = {
+        pk: pkList[i],
+        share: {
+          x: encryptedX, 
+          y: encryptedY
+        }
+      }
+      sharesList.push(share);
+    }
+    axios.post('/api/vote/postShare', sharesList)
+      .then(response => console.log('successfully sent shares'))
+      .catch(error => console.error(error));
+
   }catch (error) {
     console.error('Error in handleSubmit:', error)
   }
 }
 
+async function handleTally() {
+  let shares = [];
+  await axios.post('/api/vote/getShares', {pk : keys.value.publicKey})
+    .then(response => {
+      shares = response.data.shares;
+      console.log('successfully got shares');
+    })
+    .catch(error => console.error(error));
+  let resultShare = {
+    x:0,
+    y:0
+  } ;
+  if (shares != []) {
+    for (let i=0 ; i < shares.length; i++) {
+        resultShare.x += await decryptedMessage(shares[i].share.x, keys.value.privateKey);
+        resultShare.y += await decryptedMessage(shares[i].share.y, keys.value.privateKey);
+    }
+  }
+  axios.post('/api/vote/postResultShare', {resultShare : resultShare})
+    .then(response => console.log('successfully sent result share'))
+    .catch(error => console.error(error));
+}
+
+let isStarted = ref(0);
+
+async function fetchIsStarted() {
+  await axios.get('/api/vote/isStarted')
+    .then(response => {
+        isStarted.value = response.data.isStarted;
+        console.log('Vote status:', response.data);
+    })
+    .catch(error => {
+      console.error('Error fetching vote status:', error);
+    });
+
+    if (isStarted.value == 1) {
+        state.value = "投票中"
+    } 
+    if (isStarted.value == 0) {
+        state.value = "投票準備中…"
+    }
+}
+
+async function fetchIsTallyReady() {
+  await axios.get('/api/vote/isTallyReady')
+    .then(response => {
+        isTallyReady.value = response.data.isTallyReady;
+        console.log('Tally status:', response.data);
+    })
+    .catch(error => {
+      console.error('Error fetching tally status:', error);
+    });
+}
+
+async function fetchIsTallyOver() {
+  await axios.get('/api/vote/isTallyOver')
+    .then(response => {
+        isTallyOver.value = response.data.isTallyOver;
+        console.log('Tally status:', response.data);
+    })
+    .catch(error => {
+      console.error('Error fetching tally status:', error);
+    });
+  if (isTallyOver.value == 1) {
+    let resultShares = [];
+    await axios.get('api/vote/getResultShares')
+      .then(response => {
+        resultShares = response.data.resultShares;
+        console.log('Tally result:', response.data);
+      })
+      .catch(error => {
+        console.error('Error fetching tally result:', error);
+      });
+    result.value = getSecret(resultShares, PRIME);
+    console.log('Tally result:', result.value);
+  }
+}
+
 onMounted(async () => {
-  axios.post('/api/vote/access').then(response => console.log(response.data)).catch(error => console.error(error));
   try {
-    userOutput.value = '0'
 
     // key gen, enc, dec
     // const message = String(myScore);
-    const keys = await genKeys();
+    keys = await genKeys();
+    const accessData = {
+      pk : keys.publicKey
+    }
+    await axios.post('/api/vote/access', accessData).then(response => console.log(response.data)).catch(error => console.error(error));
+    setInterval(fetchIsStarted, 1000);
+    setInterval(fetchIsTallyReady, 1000);
+    setInterval(fetchIsTallyOver, 1000);
     // // console.log("publicKey", keys.publicKey);
     // const encrypted = await encryptedMessage(message, keys.publicKey);
     // const decrypted = await decryptedMessage(encrypted, keys.privateKey);
