@@ -8,6 +8,7 @@ const routes = [
     { path: '/', component: () => import('./components/Home.vue') },
     { path: '/vote', component: () => import('./components/Vote.vue') },
     { path: '/manage', component: () => import('./components/Manage.vue') },
+    { path: '/debug', component: () => import('./components/Debug.vue') },
 ]
 
 const router = createRouter({

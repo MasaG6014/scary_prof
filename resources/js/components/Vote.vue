@@ -31,7 +31,7 @@ const keyOptions = {
   userIDs: [{ name: 'anon', email: 'anon@anon.com' }]
 }
 
-const keys = ref(null)
+let keys = ref(null)
 
 class point {
     constructor(x, y) {
@@ -128,7 +128,7 @@ async function decryptedMessage(cipher: string, privateKey: openpgp.PrivateKey) 
 }
 
 const userInput = ref('') // ユーザーの入力を格納する変数
-const result = ref('') // ユーザーのoutputを表示する変数
+let result = ref(0) // ユーザーのoutputを表示する変数
 let state = ref('')
 let isTallyReady = ref(0)
 let isTallyOver = ref(0)
@@ -137,6 +137,7 @@ async function handleSubmit() {
   // ユーザーが入力した値を処理する関数
   try {
     let pkList = [];
+    console.log("pkList", pkList);
     await axios.get('/api/vote/getPkList')
       .then(response => {pkList = response.data.pkList;console.log('successfully got pkList')})
       .catch(error => console.error(error));
@@ -145,6 +146,11 @@ async function handleSubmit() {
     const shares = getShares(myScore, numOfuser+1, PRIME);
     console.log("create shares", shares);
     let sharesList = [];
+    console.log("typeof pkList[0]", typeof pkList[0]);
+    console.log("pkList[0]", pkList[0]);
+    for (let i = 0; i < numOfuser; i++) {
+      pkList[i] = await openpgp.readKey({ armoredKey:pkList[i] });
+    }
     for (let i = 0; i < numOfuser; i++) {
       const encryptedX = await encryptedMessage(shares[i+1].x.toString(), pkList[i]);
       const encryptedY = await encryptedMessage(shares[i+1].y.toString(), pkList[i]);
@@ -244,19 +250,24 @@ async function fetchIsTallyOver() {
   }
 }
 
+let intervalIsStarted: number;
+let intervalIsTallyReady: number;
+let intervalIsTallyOver: number;
+
 onMounted(async () => {
   try {
 
     // key gen, enc, dec
     // const message = String(myScore);
     keys = await genKeys();
+    console.log("type of pk", typeof keys.publicKey);
     const accessData = {
       pk : keys.publicKey
     }
     await axios.post('/api/vote/access', accessData).then(response => console.log(response.data)).catch(error => console.error(error));
-    setInterval(fetchIsStarted, 1000);
-    setInterval(fetchIsTallyReady, 1000);
-    setInterval(fetchIsTallyOver, 1000);
+    intervalIsStarted = window.setInterval(fetchIsStarted, 1000);
+    intervalIsTallyReady = window.setInterval(fetchIsTallyReady, 1000);
+    intervalIsTallyOver = window.setInterval(fetchIsTallyOver, 1000);
     // // console.log("publicKey", keys.publicKey);
     // const encrypted = await encryptedMessage(message, keys.publicKey);
     // const decrypted = await decryptedMessage(encrypted, keys.privateKey);
@@ -266,6 +277,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  clearInterval(intervalIsStarted);
+  clearInterval(intervalIsTallyReady);
+  clearInterval(intervalIsTallyOver);
   axios.post('/api/vote/leave').then(response => console.log(response.data)).catch(error => console.error(error));
   // コンポーネントがアンマウントされる前に実行する処
   console.log('Component is about to be unmounted')
