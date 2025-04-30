@@ -34,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
                 Cache::put('result', [], 3600);
                 Redis::set('numOfResultShares', 0);
                 Redis::set('isTallyOver',0);
+                Redis::set('vote:state', "waiting");
                 // 必要に応じて他のキーの初期化も行う
                 file_put_contents($flagPath, '1'); // 初期化済みフラグを作成
             }

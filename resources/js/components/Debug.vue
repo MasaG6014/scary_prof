@@ -2,159 +2,179 @@
     <div>
       <h1>Debug Page</h1>
       <button @click="handleButton">Reset Redis value</button>
+      <button @click="runDebug">Run Debug</button>
+      <button @click="stopDebug">Stop Debug</button>
     </div>
-  </template>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted , onBeforeUnmount} from 'vue';
+import * as openpgp from 'openpgp';
+import axios from 'axios';
+import { User } from './models/User';
+import { Host } from './models/Host';
+const PRIME = 10007;
+let keys = ref<any>(null);
+let stopFlag = ref(false);  
+
+async function handleButton() {
+await axios.get('/api/manage/leave')
+    .then(response => {
+    console.log('Redis value reset:', response.status);
+    })
+    .catch(error => {
+    console.error('Error resetting Redis value:', error);
+    });
+}
   
-  <script setup lang="ts">
-  import { ref, onMounted , onBeforeUnmount} from 'vue';
-  import * as openpgp from 'openpgp';
-  import axios from 'axios';
-  import {calcPolyValue, genKeys, encryptedMessage, decryptedMessage, getSecret, getShares, point} from './utils/cryptoUtils';
-  const PRIME = 10007;
-  let keys = ref<any>(null);
-  
-  class User {
-    name: string;
-    score: number;
-    pk: openpgp.PublicKey;
+function stopDebug() {
+    console.log('Stopping debug...');
+    stopFlag.value = true; // stopFlagをtrueに設定
+    // ここで必要なクリーンアップ処理を行う
+}
 
-    constructor(name: string , score: number) {
-        this.name = name;
-        this.score = score;
-    }
-
-    async accessPage(){
-        try {
-            const pk = await genKeys();
-            this.pk = await openpgp.readKey({ armoredKey: pk.publicKey });
-            console.log("pk", this.pk);
-            console.log("pk type", typeof this.pk);
-            const accessData = {
-                pk : keys.value.publicKey
-            };
-            await axios.post('/api/vote/access', accessData)
-                .then(response => console.log("vote access ",response.data))
-                .catch(error => console.error(error));
-            console.log(this.name,' accessPage success');
-        } catch (error) {
-            console.error(this.name,' accessPage fail ', error);
-        }
-    }
-
-    async getPkList(): Promise<openpgp.PublicKey[]> {
-        try {
-            const response = await axios.get('/api/vote/getPkList');
-            const pkList = response.data.pkList;
-            console.log(this.name, 'successfully got pkList', pkList);
-            return pkList;
-        } catch (error) {
-            console.error(this.name, 'getPkList error:', error);
-            return [];
-        }
-    }
-
-    async sendScore(){
-        const pkList = await this.getPkList();
-        const shares:point[] = getShares(this.score, pkList.length, PRIME);
-        let sharesList: { pk: openpgp.PublicKey; share: { x: string; y: string } }[] = [];
-        for (let i = 0; i < pkList.length; i++) {
-            const encryptedX = await encryptedMessage(shares[i+1].x.toString(), pkList[i]);
-            const encryptedY = await encryptedMessage(shares[i+1].y.toString(), pkList[i]);
-            const share = {
-                pk: pkList[i],
-                share: {
-                    x: encryptedX, 
-                    y: encryptedY
-                }
-            }
-            sharesList.push(share);
-        }
-        await axios.post('/api/vote/postShare', sharesList)
-            .then(response => console.log(this.name, 'successfully sent shares'))
-            .catch(error => console.error(this.name, 'sendScore error:', error));
-        console.log(this.name, 'sendScore success');
-        try{}catch (error) {
-            console.error(this.name, 'sendScore error:', error);
-        }
-    }
-
-    async tally(){
-        let shares:{share: {x: string, y: string}}[] = [];
-        await axios.post('/api/vote/tally', {pk : keys.value.publicKey})
-            .then(response => {
-                shares = response.data.shares;
-                console.log(this.name, 'successfully got shares');
-            })
-            .catch(error => console.error(this.name, 'getShares error:', error));
-        return shares;
-    }
-
-    async getResultShare(){
-        let resultShare = {
-            x:0,
-            y:0
-        } ;
-        const shares = await this.tally();
-        if (shares.length > 0) {
-            for (let i=0 ; i < shares.length; i++) {
-                resultShare.x += await decryptedMessage(shares[i].share.x, keys.value.privateKey);
-                resultShare.y += await decryptedMessage(shares[i].share.y, keys.value.privateKey);
-            }
-        }
-        return resultShare;
-    }
+async function runDebug() {
+    stopFlag.value = false; // stopFlagをfalseに設定
+    const numOfUser = 3;
+    const host = new Host();
+    const user1 = new User("1",10);
+    const user2 = new User("2",20);
+    const user3 = new User("3",30);
+    await user1.accessPage();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await user2.accessPage();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await user3.accessPage();
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-  }
-
-  class Host {
-    constructor() {
-    }
-
-    async start() {
-        try{
-            await axios.post('/api/manage/start')
-                .then(response => {
-                    console.log('Vote started:', response.data);
-                })
-                .catch(error => {
-                    console.error('Error starting vote:', error);
-                });
-        }catch (error) {
-            console.error('Host start error:', error);
+    outer:
+    while(true) {
+        if (stopFlag.value) {
+            console.log('Debug stopped.');
+            break; // stopFlagがtrueならループを抜ける
         }
-    }
-
-    async tally() {
-        try{
-            await axios.post('/api/manage/tally')
-                .then(response => {
-                    console.log('Tally started:', response.data);
-                })
-                .catch(error => {
-                    console.error('Error starting tally:', error);
-                });
-        }catch (error) {
-            console.error('Host tally error:', error);
+      try {
+        const response = await axios.get('/api/vote/getState');
+        if (!response) {
+          console.log('State is not set yet');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
         }
-        
+  
+        const state = response.data.state;
+  
+  
+        switch (state) {
+          case 'waiting':
+            try {
+              console.log('State is waiting');
+              const respnse = await axios.get('/api/vote/getCount');
+              if (!respnse) {
+                console.log('Count is not set yet');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+              }
+              const count = respnse.data.count;
+              console.log('Count:', count);
+              if (count == numOfUser) {
+                console.log('Count is equal to numOfUser');
+                await host.start();
+              }
+            } catch (error) {
+              console.error('Error in waiting state:', error);
+              throw error; // エラー発生時、上位のcatchへ投げてループ終了
+              break outer; // ループを抜ける
+            }
+            break;
+  
+          case 'voting':
+            console.log('State is voting');
+            try {
+              await user1.getPkList();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user2.getPkList();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user3.getPkList();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+  
+              user1.setScore(40);
+              user2.setScore(50);
+              user3.setScore(60);
+  
+              await user1.sendScore();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user2.sendScore();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user3.sendScore();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+  
+              const resonse_tallyReady = await axios.get('/api/vote/getTallyReady');
+              if (!resonse_tallyReady) {
+                console.log('TallyReady is not set yet');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+              }
+              const tallyReady = resonse_tallyReady.data.tallyReady;
+              console.log('TallyReady:', tallyReady);
+  
+              if (tallyReady == numOfUser) {
+                console.log('TallyReady is equal to numOfUser');
+                await host.tally();
+              }
+            } catch (error) {
+              console.error('Error in voting state:', error);
+              throw error;
+              break outer; // ループを抜ける
+            }
+            break;
+  
+          case 'tallying':
+            console.log('State is tallying');
+            try {
+              await user1.tally();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user2.tally();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user3.tally();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+              console.error('Error in tallying state:', error);
+              throw error;
+              break outer; // ループを抜ける
+            }
+            break;
+  
+          case 'done':
+            console.log('State is done');
+            try {
+              await user1.getResult();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user2.getResult();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await user3.getResult();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+              console.error('Error in done state:', error);
+              throw error;
+              break outer; // ループを抜ける
+            }
+            break outer;
+  
+          default:
+            console.log('Unknown state:', state);
+            break outer;
+        }
+  
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error('Error caught in runDebug, exiting loop:', error);
+        break; // エラーが発生したらwhileループを抜ける
+      }
     }
-  }
-
-  async function handleButton() {
-    await axios.get('/api/manage/leave')
-      .then(response => {
-        console.log('Redis value reset:', response.status);
-      })
-      .catch(error => {
-        console.error('Error resetting Redis value:', error);
-      });
   }
   
-  onMounted(async () => {
-        const host = new Host();
-        const user1 = new User("1",10);
-        const user2 = new User("2",20);
-        const user3 = new User("3",30);
+  onMounted(() => {
+    // 必要ならonMountedでrunDebugを呼ぶとか
   });
   
   onBeforeUnmount(() => {

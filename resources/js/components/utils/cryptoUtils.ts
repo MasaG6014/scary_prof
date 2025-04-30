@@ -2,7 +2,7 @@
   const PRIME = 10007;
   const keyOptions: openpgp.GenerateKeyOptions & { format: "armored" } = {
     type: 'rsa',               // 鍵の種類（'rsa' や 'ecc'）
-    rsaBits: 128,             // RSA鍵の場合のビット長
+    rsaBits: 2048,             // RSA鍵の場合のビット長
     userIDs: [{ name: 'anon', email: 'anon@anon.com' }],
     format: "armored"          // 指定されたフォーマット
   }
@@ -76,9 +76,14 @@ function modInverse(a: number, p: number) : number {
 }
 
 export async function genKeys() {
+    try {
     const generatedKeys = await openpgp.generateKey(keyOptions);
     // console.log("Generated keys:", typeof keys.value);
     return generatedKeys;
+    }catch (error) {
+        console.error('Key generation error:', error);
+        throw error;
+    }
 }
 
 export async function encryptedMessage(message: string, publicKey: openpgp.PublicKey) {

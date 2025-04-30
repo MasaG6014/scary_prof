@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Redis\RedisServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
@@ -8,6 +9,26 @@ use Illuminate\Http\Request;
 
 Route::get('/hello', function () {
     return response()->json(['message' => 'hello world']);
+});
+
+Route::get('/vote/getState', function () {
+    $state = Redis::get('vote:state');
+    return response()->json(['state' => $state]);
+});
+
+Route::post('/vote/goVoting', function(){
+    Redis::set('vote:state', "voting");
+    return response()->json(['status' => 'ok']);
+});
+
+Route::post('/vote/goTally', function(){
+    Redis::set('vote:state', "tallying");
+    return response()->json(['status' => 'ok']);
+});
+
+Route::post('/vote/tallyDone', function(){
+    Redis::set('vote:state', "done");
+    return response()->json(['status' => 'ok']);
 });
 
 Route::post('/vote/access', function (Request $request) {
@@ -86,7 +107,7 @@ Route::get('getResultShares', function () {
     return response()->json(['resultShares' => $resultShares]);
 });
 
-Route ::get('/vote/count', function () {
+Route ::get('/vote/getCount', function () {
     $count = Redis::get('vote:access');
     return response()->json(['count' => $count]);
 });
@@ -105,10 +126,11 @@ Route::post('/manage/reset', function () {
 
 Route::post('/manage/start', function () {
     Redis::set('vote:start', 1);
+    Redis::set('vote:state', "voting");
     return response()->json(['status' => 'ok']);
 });
 
-Route::get('/manage/tallyReady', function () {
+Route::get('/manage/getTallyReady', function () {
     $tallyReady = Redis::get('vote:tallyReady');
     return response()->json(['tallyReady' => $tallyReady]);
 });
@@ -129,5 +151,6 @@ Route::get('/manage/leave', function () {
     Cache::put('result', [], 3600);
     Redis::set('numOfResultShares', 0);
     Redis::set('isTallyOver',0);
+    Redis::set('vote:state', "waiting");
     return response() -> json(['status' => 'ok']);
 });
