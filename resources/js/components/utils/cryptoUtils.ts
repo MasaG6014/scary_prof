@@ -1,4 +1,5 @@
-  import * as openpgp from 'openpgp';
+  import { format } from 'crypto-js';
+import * as openpgp from 'openpgp';
   const PRIME = 10007;
   const keyOptions: openpgp.GenerateKeyOptions & { format: "armored" } = {
     type: 'rsa',               // 鍵の種類（'rsa' や 'ecc'）
@@ -29,11 +30,11 @@ export  function calcPolyValue(x: number, coefficients: number[], prime: number)
 
 function getShares(myScore: number, numOfuser: number, prime: number) : point[] {
     let coefficients = [myScore];
-    for (let i = 1; i < numOfuser; i++) {
+    for (let i = 1; i < numOfuser+1; i++) {
       coefficients.push(Math.floor(Math.random() * prime));
     }
     let points = [new point(0, myScore)];
-    for (let i = 1; i < numOfuser; i++) {
+    for (let i = 1; i < numOfuser+1; i++) {
       points.push(new point(i, calcPolyValue(i, coefficients,prime)));
     }
     return points;
@@ -90,7 +91,7 @@ export async function encryptedMessage(message: string, publicKey: openpgp.Publi
     const options = {
         message: await openpgp.createMessage({ text: message }), // plaintext as Message object
         encryptionKeys: await openpgp.readKey({ armoredKey: publicKey.armor() }), // for encryption
-        armor: true
+        format: "armored" as "armored" // explicitly set the format type
     }
     const cipher = await openpgp.encrypt(options);
     // console.log("Encrypted message:", cipher);

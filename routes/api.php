@@ -31,6 +31,8 @@ Route::post('/vote/tallyDone', function(){
     return response()->json(['status' => 'ok']);
 });
 
+
+
 Route::post('/vote/access', function (Request $request) {
     Redis::incr('vote:access');
     $data = $request->all();
@@ -44,11 +46,6 @@ Route::post('/vote/access', function (Request $request) {
     Cache::put($pk, [], 3600);
     Cache::put('pkList', $pkList, 3600);
     return response()->json(['status' => 'ok', 'pk' => $pk, 'pkList' => $pkList]);
-});
-
-Route::get('/vote/isStarted', function ()  {
-    $isStart = Redis::get('vote:start');
-    return response()->json(['isStarted'=> $isStart]);
 });
 
 Route::get('/vote/getPkList', function () {
@@ -70,10 +67,6 @@ Route::post('/vote/postShares', function (Request $request) {
     Redis::incr('vote:tallyReady');
 });
 
-Route::get('/vote/isTallyReady', function () {
-    $isTallyReady = Redis::get('vote:tallyReady');
-    return response()->json(['isTallyReady' => $isTallyReady]);
-});
 
 Route::post('vote/tally', function(Request $request) {
     $data = $request->all();
@@ -82,9 +75,9 @@ Route::post('vote/tally', function(Request $request) {
     return response() -> json(['shares' => $shares]);
 });
 
-Route::post('vote/postResultShare', function (Request $request) {
+Route::post('vote/postResultShares', function (Request $request) {
     $data = $request->all();
-    $resultShare = $data['resultShare'];
+    $resultShare = $data['resultShares'];
     $res = Cache::get('result');
     if (!is_array($res)) {
         $res = [];
@@ -93,7 +86,7 @@ Route::post('vote/postResultShare', function (Request $request) {
     Cache::put('result', $res, 3600);
     Redis::incr('numOfResultShares');
     if (Redis::get('numOfResultShares') == Redis::get('vote:access')) {
-        Redis::set('isTallyOver', 1);
+        Redis::set('vote:state', "tallyDone");
     }
 });
 
@@ -102,7 +95,7 @@ Route::get('/vote/isTallyOver', function () {
     return response()->json(['isTallyOver' => $isTallyOver]);
 });
 
-Route::get('getResultShares', function () {
+Route::get('/vote/getResultShares', function () {
     $resultShares = Cache::get('result');
     return response()->json(['resultShares' => $resultShares]);
 });
@@ -137,8 +130,7 @@ Route::get('/manage/getTallyReady', function () {
 
 
 Route::post('/manage/tally', function () {
-    Redis::set('vote:start',0);
-    Redis::set('vote:tallyStart',1);
+    Redis::set('vote:state', "tallying");
     return response()->json(['status' => 'ok']);
 });
 

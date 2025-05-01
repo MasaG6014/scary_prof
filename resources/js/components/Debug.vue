@@ -4,18 +4,31 @@
       <button @click="handleButton">Reset Redis value</button>
       <button @click="runDebug">Run Debug</button>
       <button @click="stopDebug">Stop Debug</button>
+      <button @click="testFunc">test Function</button>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted , onBeforeUnmount} from 'vue';
 import * as openpgp from 'openpgp';
+import {calcPolyValue, genKeys, encryptedMessage, decryptedMessage, getSecret, getShares, point} from './utils/cryptoUtils';
 import axios from 'axios';
 import { User } from './models/User';
 import { Host } from './models/Host';
 const PRIME = 10007;
 let keys = ref<any>(null);
 let stopFlag = ref(false);  
+
+async function testFunc() {
+    try {
+        const testUser = new User("0",77);
+        console.log('testUser type of pk', typeof testUser.pk);
+        await testUser.accessPage();
+        await testUser.sendScore();
+    } catch (error) {
+        console.error('Error calling test API:', error);
+    }
+}
 
 async function handleButton() {
 await axios.get('/api/manage/leave')
@@ -79,6 +92,7 @@ async function runDebug() {
               if (count == numOfUser) {
                 console.log('Count is equal to numOfUser');
                 await host.start();
+                console.log('Vote started');
               }
             } catch (error) {
               console.error('Error in waiting state:', error);
@@ -108,7 +122,7 @@ async function runDebug() {
               await user3.sendScore();
               await new Promise(resolve => setTimeout(resolve, 1000));
   
-              const resonse_tallyReady = await axios.get('/api/vote/getTallyReady');
+              const resonse_tallyReady = await axios.get('/api/manage/getTallyReady');
               if (!resonse_tallyReady) {
                 console.log('TallyReady is not set yet');
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -144,7 +158,7 @@ async function runDebug() {
             }
             break;
   
-          case 'done':
+          case 'tallyDone':
             console.log('State is done');
             try {
               await user1.getResult();
