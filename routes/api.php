@@ -55,7 +55,9 @@ Route::post('/vote/access', function (Request $request) {
         $pkList = [];
     }
     $pkList[] = $pk;
+    Log::debug("accessPage pk: $pk");
     Cache::put($pk, [], 3600);
+    Log::debug("Cache content for pk $pk:", Cache::get($pk));
     Cache::put('pkList', $pkList, 3600);
     return response()->json(['status' => 'ok', 'pk' => $pk, 'pkList' => $pkList]);
 });
@@ -66,9 +68,15 @@ Route::get('/vote/getPkList', function () {
 });
 
 Route::post('/vote/postShares', function (Request $request) {
-    $data = $request->all();
-    $shares = $data['shares'];
-    foreach ($shares as $shareItem) {
+    $data = $request->validate([
+        'shares' => 'required|array',
+        'shares.*.pk' => 'required|string',
+        'shares.*.share' => 'required|array',
+        'shares.*.share.x' => 'required|string',
+        'shares.*.share.y' => 'required|string',
+    ]);
+
+    foreach ($data['shares'] as $shareItem) {
         $pk = $shareItem['pk'];
         $share = $shareItem['share'];
         $shareList = Cache::get($pk, []);
@@ -79,6 +87,7 @@ Route::post('/vote/postShares', function (Request $request) {
         Cache::put($pk, $shareList, 3600);
     }
     Redis::incr('vote:tallyReady');
+    return response()->json(['status' => 'ok']);
 });
 
 
@@ -152,7 +161,6 @@ Route::get('/manage/leave', function () {
     Redis::set('vote:access', 0);
     Cache::put('pkList',[], 3600);
     Redis::set('vote:tallyReady', 0);
-    Redis::set('vote:tallyStart', 0);
     Cache::put('result', [], 3600);
     Redis::set('numOfResultShares', 0);
     Redis::set('vote:state', "waiting");

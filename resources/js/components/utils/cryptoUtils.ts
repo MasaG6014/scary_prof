@@ -1,13 +1,9 @@
-  import { format } from 'crypto-js';
 import * as openpgp from 'openpgp';
-  const PRIME = 10007;
-  const keyOptions: openpgp.GenerateKeyOptions & { format: "armored" } = {
-    type: 'rsa',               // 鍵の種類（'rsa' や 'ecc'）
-    rsaBits: 2048,             // RSA鍵の場合のビット長
-    userIDs: [{ name: 'anon', email: 'anon@anon.com' }],
-    format: "armored"          // 指定されたフォーマット
-  }
-  export class point {
+import { PRIME } from './constants';
+import { KEY_OPTIONS } from './constants';
+  
+
+export class point {
     x: number;
     y: number;
     constructor(x, y) {
@@ -26,21 +22,24 @@ export  function calcPolyValue(x: number, coefficients: number[], prime: number)
         res = res % prime;
     }
     return res % prime
-}export
-
-function getShares(myScore: number, numOfuser: number, prime: number) : point[] {
+}
+export  function getCoefficients(myScore: number, numOfuser: number, prime: number) : number[] {
     let coefficients = [myScore];
-    for (let i = 1; i < numOfuser+1; i++) {
-      coefficients.push(Math.floor(Math.random() * prime));
+    for (let i = 1; i < numOfuser; i++) {
+        coefficients.push(Math.floor(Math.random() * prime)% prime);
     }
-    let points = [new point(0, myScore)];
+    return coefficients;
+}
+
+export function getShares(myScore: number, numOfuser: number,  coefficients:number[], prime: number) : point[] {
+    let points:point[] = [];
     for (let i = 1; i < numOfuser+1; i++) {
       points.push(new point(i, calcPolyValue(i, coefficients,prime)));
     }
     return points;
-}export
+}
 
-function getSecret(points: point[], prime: number) : number {
+export function getSecret(points: point[], prime: number) : number {
     let secret = 0;
     for (let i = 0; i < points.length; i++) {
         const x_i = points[i].x;
@@ -57,9 +56,9 @@ function getSecret(points: point[], prime: number) : number {
         secret %= prime ;
     }
     return secret % prime;
-}export
+}
 
-function modInverse(a: number, p: number) : number {
+export function modInverse(a: number, p: number) : number {
     if (a < 0) a += p;
     let m0 = p, t, q;
     let x0 = 0, x1 = 1;
@@ -78,7 +77,7 @@ function modInverse(a: number, p: number) : number {
 
 export async function genKeys() {
     try {
-    const generatedKeys = await openpgp.generateKey(keyOptions);
+    const generatedKeys = await openpgp.generateKey(KEY_OPTIONS);
     // console.log("Generated keys:", typeof keys.value);
     return generatedKeys;
     }catch (error) {

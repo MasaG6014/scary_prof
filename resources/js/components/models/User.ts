@@ -1,7 +1,7 @@
 import * as openpgp from 'openpgp';
 import axios from 'axios';
-import {calcPolyValue, genKeys, encryptedMessage, decryptedMessage, getSecret, getShares, point} from '../utils/cryptoUtils';
-const PRIME = 10007;
+import {calcPolyValue,getCoefficients, genKeys, encryptedMessage, decryptedMessage, getSecret, getShares, point} from '../utils/cryptoUtils';
+import { PRIME } from '../utils/constants';
   
 export class User {
     name: string;
@@ -46,7 +46,7 @@ export class User {
                 .catch(error => console.error(error));
 
 
-            await this.getPkInfo();
+            // await this.getPkInfo();
             console.log(this.name,' accessPage success');
         
         } catch (error) {
@@ -74,6 +74,7 @@ export class User {
     async sendScore(){
         const pkListRaw = await this.getPkList();
         // pkListRawがstringなら、openpgp.PublicKeyに変換する
+        console.log(this.name, 'sendScore pkListRaw', pkListRaw);
         const pkList: openpgp.PublicKey[] = await Promise.all(
           pkListRaw.map(async (item: any) => {
             if(typeof item === 'string'){
@@ -82,13 +83,16 @@ export class User {
             return item;
           })
         );
-        console.log(this.name, 'sendScore typeof pkList[0]', typeof pkList[0]);
-        const shares: point[] = getShares(this.score, pkList.length, PRIME);
+        // console.log(this.name, 'sendScore typeof pkList[0]', typeof pkList[0]);
+
+        const coefficients: number[] = getCoefficients(this.score, pkList.length, PRIME);
+        const shares: point[] = getShares(this.score, pkList.length,coefficients, PRIME);
         console.log(this.name, 'sendScore shares', shares);
+
         let sharesList: { pk: string; share: { x: string; y: string } }[] = [];
         for (let i = 0; i < pkList.length; i++) {
-            const encryptedX = await encryptedMessage(shares[i+1].x.toString(), pkList[i]);
-            const encryptedY = await encryptedMessage(shares[i+1].y.toString(), pkList[i]);
+            const encryptedX = await encryptedMessage(shares[i].x.toString(), pkList[i]);
+            const encryptedY = await encryptedMessage(shares[i].y.toString(), pkList[i]);
             const share = {
                 pk: pkList[i].armor(),
                 share: { x: encryptedX, y: encryptedY }
@@ -96,17 +100,19 @@ export class User {
             sharesList.push(share);
         }
         console.log(this.name, 'sendScore sharesList', sharesList);
+
         await axios.post('/api/vote/postShares', {shares:sharesList})
             .then(response => console.log(this.name, 'successfully sent shares'))
             .catch(error => console.error(this.name, 'sendScore error:', error));
-        await this.getPkInfo();
+        // await this.getPkInfo();
+
         console.log(this.name, 'sendScore success');
     }
 
     async tally(){
         try {
-            await this.getPkInfo();
-            const response  = await axios.post('/api/vote/tally', {pk : this.keys.publicKey})
+            // await this.getPkInfo();
+            const response  = await axios.post('/api/vote/tally', {pk : this.pk.armor()})
             if (!response) {
                 console.error(this.name, 'tally error: no response');
             }
@@ -115,18 +121,19 @@ export class User {
                 console.error(this.name, 'tally error: no shares');
             }
             console.log(this.name, 'tally shares', shares);
-            let resultShares: {x:number, y:number}[] = [];
+
+            let resultShare: {x:number, y:number} = {x: 0, y: 0};
+            resultShare.x = await decryptedMessage(shares[0].x, this.sk);
             if (shares.length > 0) {
                 for (let i=0 ; i < shares.length; i++) {
-                    const resultShare ={
-                        x : await decryptedMessage(shares[i].x, this.sk),
-                        y : await decryptedMessage(shares[i].y, this.sk)
-                    }
-                    resultShares.push(resultShare);
+                    resultShare.y += await decryptedMessage(shares[i].y, this.sk);
+                    resultShare.y %= PRIME;
+                    console.log(this.name, 'tally decrypted y', resultShare.y);
                 }
             }
-            console.log(this.name, 'tally resultShares', resultShares);
-            await axios.post('/api/vote/postResultShares', {resultShares:resultShares})
+
+            console.log(this.name, 'tally resultShares', resultShare);
+            await axios.post('/api/vote/postResultShares', {resultShares:resultShare})
                 .then(response => console.log(this.name, 'successfully sent resultShare'))
                 .catch(error => console.error(this.name, 'tally error:', error));
             console.log(this.name, 'tally success');

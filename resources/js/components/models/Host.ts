@@ -2,7 +2,8 @@ import { ref, onMounted , onBeforeUnmount} from 'vue';
   import * as openpgp from 'openpgp';
   import axios from 'axios';
   import {calcPolyValue, genKeys, encryptedMessage, decryptedMessage, getSecret, getShares, point} from '../utils/cryptoUtils';
-  const PRIME = 10007;
+import { PRIME } from '../utils/constants';
+
   export class Host {
     constructor() {
     }
