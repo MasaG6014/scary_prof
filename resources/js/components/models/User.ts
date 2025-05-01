@@ -17,6 +17,17 @@ export class User {
         this.score = score;
     }
 
+    async getPkInfo(){
+        try {
+            await axios.post('/api/vote/getPkInfo', {pk: this.pk.armor()})
+            .then(response => console.log(this.name, 'pkInfo', response.data.info))
+            .catch(error => console.error(this.name, 'getPkInfo error:', error));
+            console.log(this.name, 'getPkInfo success');
+        } catch (error) {
+            console.error(this.name, 'getPkInfo error:', error);
+        }
+    }
+
     async accessPage(){
         try {
             // generate keys
@@ -35,6 +46,7 @@ export class User {
                 .catch(error => console.error(error));
 
 
+            await this.getPkInfo();
             console.log(this.name,' accessPage success');
         
         } catch (error) {
@@ -87,11 +99,13 @@ export class User {
         await axios.post('/api/vote/postShares', {shares:sharesList})
             .then(response => console.log(this.name, 'successfully sent shares'))
             .catch(error => console.error(this.name, 'sendScore error:', error));
+        await this.getPkInfo();
         console.log(this.name, 'sendScore success');
     }
 
     async tally(){
         try {
+            await this.getPkInfo();
             const response  = await axios.post('/api/vote/tally', {pk : this.keys.publicKey})
             if (!response) {
                 console.error(this.name, 'tally error: no response');

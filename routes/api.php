@@ -11,6 +11,18 @@ Route::get('/hello', function () {
     return response()->json(['message' => 'hello world']);
 });
 
+Route::post('/vote/getPkInfo', function (Request $request) {
+    $data = $request->all();
+    $pk = (string)($data['pk'] ?? '');
+    $info = Cache::get($pk, []);
+    if (!is_array($info)) {
+        $info = [];
+    }
+    return response()->json(['info' => $info]);
+});
+
+
+
 Route::get('/vote/getState', function () {
     $state = Redis::get('vote:state');
     return response()->json(['state' => $state]);
@@ -56,7 +68,9 @@ Route::get('/vote/getPkList', function () {
 Route::post('/vote/postShares', function (Request $request) {
     $data = $request->all();
     $shares = $data['shares'];
-    foreach ($shares as $pk => $share) {
+    foreach ($shares as $shareItem) {
+        $pk = $shareItem['pk'];
+        $share = $shareItem['share'];
         $shareList = Cache::get($pk, []);
         if (!is_array($shareList)) {
             $shareList = [];
@@ -78,11 +92,11 @@ Route::post('vote/tally', function(Request $request) {
 Route::post('vote/postResultShares', function (Request $request) {
     $data = $request->all();
     $resultShare = $data['resultShares'];
-    $res = Cache::get('result');
+    $res = Cache::get('result',[]);
     if (!is_array($res)) {
         $res = [];
     }
-    $res = $resultShare;
+    $res[] = $resultShare;
     Cache::put('result', $res, 3600);
     Redis::incr('numOfResultShares');
     if (Redis::get('numOfResultShares') == Redis::get('vote:access')) {
@@ -136,13 +150,11 @@ Route::post('/manage/tally', function () {
 
 Route::get('/manage/leave', function () {
     Redis::set('vote:access', 0);
-    Redis::set('vote:start', 0);
     Cache::put('pkList',[], 3600);
     Redis::set('vote:tallyReady', 0);
     Redis::set('vote:tallyStart', 0);
     Cache::put('result', [], 3600);
     Redis::set('numOfResultShares', 0);
-    Redis::set('isTallyOver',0);
     Redis::set('vote:state', "waiting");
     return response() -> json(['status' => 'ok']);
 });
