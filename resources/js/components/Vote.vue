@@ -73,19 +73,35 @@ let intervalUserAction: number;
 let actionFlag = false; // actionFlagを初期化 
 let tallySentFlag = false; // tallSentFlagを初期化
 async function userAction () {
-      try {
+        try{
         await new Promise(resolve => setTimeout(resolve, 1000));
         fetchState();
         console.log('State:', state.value);
+      }catch (error) {
+        console.error('Error in userAction:', error);
+      }
+}
+
+onMounted(async () => {
+  try {
+    user.accessPage();
+    intervalUserAction = window.setInterval(userAction, 1000);
+    while (true) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (actionFlag) {try {
         switch(state.value) {
           case 'waiting':
             break;
           case 'voting':
             break;
           case 'tallying':
+            console.log('tallyFlag:', tallySentFlag);
             if (!tallySentFlag) {
               await user.tally();
               tallySentFlag = true; // 送信後にフラグを立てる
+            }
+            else {
+              console.log('Tally share already sent');
             }
             break;
           case 'tallyDone':
@@ -98,19 +114,11 @@ async function userAction () {
         }
       } catch (error) {
         console.error('Error in onMounted:', error);
-      }}
-
-onMounted(async () => {
-  try {
-    user.accessPage();
-    intervalUserAction = window.setInterval(userAction, 1000);
-    // while (true) {
-    //   if (actionFlag) {
-    //     console.log('Action completed, breaking the loop');
-    //     clearInterval(intervalUserAction);
-    //     break;
-    //   }
-    // }
+      }
+        console.log('Action completed, breaking the loop');
+        break;
+      }
+    }
   } catch (error) {
     console.error('vote error', error);
   }
