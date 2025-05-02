@@ -139,12 +139,6 @@ async function runDebug() {
           case 'voting':
             console.log('State is voting');
             try {
-              await user1.getPkList();
-              await new Promise(resolve => setTimeout(resolve, DELAY));
-              await user2.getPkList();
-              await new Promise(resolve => setTimeout(resolve, DELAY));
-              await user3.getPkList();
-              await new Promise(resolve => setTimeout(resolve, DELAY));
   
               user1.setScore(40);
               user2.setScore(50);

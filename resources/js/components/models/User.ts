@@ -135,7 +135,7 @@ export class User {
             console.log(this.name, 'tally decrypted share', decryptedShares);
 
             let resultShare: {x:number, y:number} = {x: 0, y: 0};
-            resultShare.x = Number(decryptedShares[0].x);
+            resultShare.x = decryptedShares[0].x;
             for (let i=0 ; i < decryptedShares.length; i++) {
                 resultShare.y += Number(decryptedShares[i].y);
                 console.log(this.name, 'tally resultShare.y', resultShare.y);
@@ -156,7 +156,7 @@ export class User {
         const response = await axios.get('/api/vote/getResultShares');
         if (!response) {
             console.error(this.name, 'getResult error: no response');
-            return [];
+            return -1;
         }
         const resultShares = response.data.resultShares;
         console.log(this.name, 'getResult resultShares', resultShares);

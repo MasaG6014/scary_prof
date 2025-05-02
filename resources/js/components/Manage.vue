@@ -1,13 +1,13 @@
 <template>
     <div>
         <h1>Managing page</h1>
-        <p>manage your vote</p>
+        <p>progress : {{ state }}</p>
         <p>number of voter : {{ voterNum }}</p>
         <p>number of ballot: {{ ballotNum }}</p>
         <buttongroup>
             <button @click="startVote"> Start</button>
             <button @click="tally"> Tally</button>
-            <button @click="resetNum"> Reset</button>
+            <button @click="reset"> Reset</button>
         </buttongroup>
     </div>
 </template>
@@ -15,15 +15,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
+import { Host } from './models/Host';
+
+const host = new Host();
 
 const voterNum = ref(0);
 const ballotNum = ref(0);
+const state = ref('waiting'); // 初期状態を設定
 
 let intervalVoter: number;
 let intervalBallot: number;
 
-function fetchVoterNum() {
-    axios.get('/api/vote/count')
+async function fetchVoterNum() {
+    await axios.get('/api/vote/getCount')
         .then(response => {
             console.log('Voter number fetched:', response.data.count);
             voterNum.value = response.data.count;
@@ -33,8 +37,8 @@ function fetchVoterNum() {
         });
 }
 
-function fetchBallotNum() {
-    axios.get('/api/manage/tallyReady')
+async function fetchBallotNum() {
+    await axios.get('/api/manage/getTallyReady')
         .then(response => {
             ballotNum.value = response.data.tallyReady;
         })
@@ -43,46 +47,57 @@ function fetchBallotNum() {
         });
 }
 
-function startVote() {
-    axios.post('/api/manage/start')
+let intervalState: number;
+async function fetchState() {
+    await axios.get('/api/vote/getState')
         .then(response => {
-            console.log('Vote started:', response.data);
-            fetchVoterNum();
+            console.log('Current state:', response.data.state);
+            state.value = response.data.state;
         })
         .catch(error => {
-            console.error('Error starting vote:', error);
-        }); 
-}
-
-function tally() {
-    axios.post('/api/manage/tally')
-        .then(response => {
-            console.log('Tally started:', response.data);
-            fetchVoterNum();
-        })
-        .catch(error => {
-            console.error('Error starting tally:', error);
+            console.error('Error fetching state:', error);
         });
 }
 
-function resetNum() {
-    axios.post('/api/manage/reset')
-        .then(response => {
-            console.log('Voter number reset:', response.data);
-            fetchVoterNum();
+async function startVote() {
+    await host.start()
+        .then(() => {
+            console.log('Vote started');
         })
         .catch(error => {
-            console.error('Error resetting voter number:', error);
+            console.error('Error starting vote:', error);
+        });
+}
+
+async function tally() {
+    await host.tally()
+        .then(() => {
+            console.log('Tally completed');
+        })
+        .catch(error => {
+            console.error('Error during tally:', error);
+        });
+}
+
+async function reset() {
+    await axios.get('/api/manage/leave')
+        .then(response => {
+        console.log('Redis value reset:', response.status);
+        })
+        .catch(error => {
+        console.error('Error resetting Redis value:', error);
         });
 }
 
 onMounted(() => {
     fetchVoterNum();
-    intervalVoter = window.setInterval(fetchVoterNum, 1000);
-    intervalBallot = window.setInterval(fetchBallotNum, 1000);
+    intervalState = window.setInterval(fetchState, 1000);
+    intervalVoter = window.setInterval(fetchVoterNum, 500);
+    intervalBallot = window.setInterval(fetchBallotNum, 500);
 });
 
 onUnmounted(() => {
+    clearInterval(intervalState);
     clearInterval(intervalVoter);
     clearInterval(intervalBallot);
     axios.get('/api/manage/leave')

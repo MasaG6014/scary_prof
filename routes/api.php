@@ -113,11 +113,6 @@ Route::post('vote/postResultShares', function (Request $request) {
     }
 });
 
-Route::get('/vote/isTallyOver', function () {
-    $isTallyOver = Redis::get('isTallyOver');
-    return response()->json(['isTallyOver' => $isTallyOver]);
-});
-
 Route::get('/vote/getResultShares', function () {
     $resultShares = Cache::get('result');
     return response()->json(['resultShares' => $resultShares]);
