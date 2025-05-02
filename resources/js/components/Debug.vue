@@ -16,11 +16,12 @@ import axios from 'axios';
 import { User } from './models/User';
 import { Host } from './models/Host';
 import { DELAY } from './utils/constants';
-import { PRIME } from './utils/constants';
+import { PRIME } from './utils/constants';;
 let keys = ref<any>(null);
 let stopFlag = ref(false);  
 
 async function testFunc() {
+  console.log('***testFunc called');
     try {
         // const testUser = new User("0",77);
         // console.log('testUser type of pk', typeof testUser.pk);
@@ -32,14 +33,18 @@ async function testFunc() {
         console.log('coefficients:', coeffeocients1);
         const shares1 = getShares(value1, num, coeffeocients1,PRIME);
         // shares.shift();
-        console.log('shares:', shares1);
+        console.log('shares:1', shares1);
         const value2 = 88;
         const coeffeocients2 = getCoefficients(value2, num, PRIME);
+        console.log('coefficients2:', coeffeocients2);
         const shares2 = getShares(value2, num, coeffeocients2,PRIME);
+        console.log('shares:2', shares2);
 
         const value3 = 99;
         const coeffeocients3 = getCoefficients(value3, num, PRIME);
+        console.log('coefficients3:', coeffeocients3);
         const shares3 = getShares(value3, num, coeffeocients3,PRIME);
+        console.log('shares:3', shares3);
 
         let res: point[]= [];
         
@@ -76,6 +81,7 @@ function stopDebug() {
 }
 
 async function runDebug() {
+  console.log('\nRunning debug...\n');
     stopFlag.value = false; // stopFlagをfalseに設定
     const numOfUser = 3;
     const host = new Host();
@@ -214,6 +220,7 @@ async function runDebug() {
         break; // エラーが発生したらwhileループを抜ける
       }
     }
+    console.log('Debug finished.');
   }
   
   onMounted(() => {

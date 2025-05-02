@@ -122,16 +122,25 @@ export class User {
             }
             console.log(this.name, 'tally shares', shares);
 
-            let resultShare: {x:number, y:number} = {x: 0, y: 0};
-            resultShare.x = await decryptedMessage(shares[0].x, this.sk);
-            if (shares.length > 0) {
-                for (let i=0 ; i < shares.length; i++) {
-                    resultShare.y += await decryptedMessage(shares[i].y, this.sk);
-                    resultShare.y %= PRIME;
-                    console.log(this.name, 'tally decrypted y', resultShare.y);
+            let decryptedShares: {x:number, y:number}[] = [];
+            for (let i=0 ; i < shares.length; i++) {
+                const decryptedX = await decryptedMessage(shares[i].x, this.sk);
+                const decryptedY = await decryptedMessage(shares[i].y, this.sk);
+                const decryptedShare = {
+                    x: decryptedX,
+                    y: decryptedY
                 }
+                decryptedShares.push(decryptedShare);
             }
+            console.log(this.name, 'tally decrypted share', decryptedShares);
 
+            let resultShare: {x:number, y:number} = {x: 0, y: 0};
+            resultShare.x = Number(decryptedShares[0].x);
+            for (let i=0 ; i < decryptedShares.length; i++) {
+                resultShare.y += Number(decryptedShares[i].y);
+                console.log(this.name, 'tally resultShare.y', resultShare.y);
+            }
+            resultShare.y = resultShare.y %  PRIME;
             console.log(this.name, 'tally resultShares', resultShare);
             await axios.post('/api/vote/postResultShares', {resultShares:resultShare})
                 .then(response => console.log(this.name, 'successfully sent resultShare'))
