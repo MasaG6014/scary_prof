@@ -62,7 +62,6 @@ async function fetchState() {
   try {
     const response = await axios.get('/api/vote/getState');
     state.value = response.data.state;
-    console.log('Current state:', state.value);
   } catch (error) {
     console.error('Error fetching state:', error);
   }
@@ -70,25 +69,23 @@ async function fetchState() {
 
 
 let intervalUserAction: number;
-let actionFlag = false; // actionFlagを初期化 
 let tallySentFlag = false; // tallSentFlagを初期化
 async function userAction () {
-        try{
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        fetchState();
-        console.log('State:', state.value);
-      }catch (error) {
-        console.error('Error in userAction:', error);
-      }
 }
 
 onMounted(async () => {
   try {
     user.accessPage();
-    intervalUserAction = window.setInterval(userAction, 1000);
     while (true) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      if (actionFlag) {try {
+      try {
+        try{
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await fetchState();
+        console.log('State:', state.value);
+      }catch (error) {
+        console.error('Error in userAction:', error);
+      }
+        console.log('Current state:', state.value);
         switch(state.value) {
           case 'waiting':
             break;
@@ -107,7 +104,6 @@ onMounted(async () => {
           case 'tallyDone':
             result.value = await user.getResult();
             console.log('Result:', result.value);
-            actionFlag = true; // actionFlagを立てる
             break;
           default:
             console.error('Unknown state:', state.value);
@@ -115,17 +111,15 @@ onMounted(async () => {
       } catch (error) {
         console.error('Error in onMounted:', error);
       }
-        console.log('Action completed, breaking the loop');
-        break;
       }
-    }
+      console.log('loop broken')
+    
   } catch (error) {
     console.error('vote error', error);
   }
 });
 
 onBeforeUnmount(() => {
-  clearInterval(intervalUserAction);
   axios
     .post('/api/vote/leave')
     .then((response) => console.log(response.data))
