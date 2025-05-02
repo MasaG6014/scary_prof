@@ -10,7 +10,7 @@
       <label for="myInput">怖さ度を入力</label>
       <input id="myInput" type="text" v-model="userInput" placeholder="Input score..." />
       <p v-if="submitFlag">投票完了！</p>
-      <button @click="handleSubmit">Submit</button>
+      <button v-if="!submitFlag" @click="handleSubmit">Submit</button>
     </div>
     <div v-if="state == 'tallyDone'">
       <p>投票が終了しました</p>

@@ -40,6 +40,7 @@ async function fetchVoterNum() {
 async function fetchBallotNum() {
     await axios.get('/api/manage/getTallyReady')
         .then(response => {
+            console.log('Ballot number fetched:', response.data.tallyReady);
             ballotNum.value = response.data.tallyReady;
         })
         .catch(error => {
