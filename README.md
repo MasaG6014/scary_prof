@@ -19,4 +19,10 @@ docker compose up --buiild -d
 ```bash
 docker compose down
 ```
-localhost:8000にアクセスするとアプリのページにアクセスできます
+localhost:8000にアクセスするとアプリのページにアクセスできます  
+アンケートを始めるには/manageにアクセスしてとりあえずResetをクリックしてください  
+progress: waitingになったらOKです  
+別のタブかウィンドウから/voteにアクセスすると、numbre of voterが増えると思います  
+規定の人数アクセスできたらstartを押してください。progree: votingになったらOKです  
+投票者側でテキストボックスが表示されるので、0~100の数字を入力してsubmitしてください。mangae側でnumber of ballotが増えます。  
+voterとballotの数が一致したらtallyを押してください。voter側に集計結果の平均値が表示されます。  
