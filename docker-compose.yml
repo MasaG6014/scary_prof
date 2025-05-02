@@ -1,0 +1,43 @@
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    volumes:
+      - .:/var/www
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+      - redis
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  node:
+    image: node:20
+    container_name: vue_node
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - 5173:5173
+    command: sh -c "npm install && npm run dev"
+
+  db:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: scaryprof
+      MYSQL_USER: user
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 3306:3306
+
+  redis:
+    image: redis:alpine
+    container_name: redis_cache
+    ports:
+      - 6379:6379

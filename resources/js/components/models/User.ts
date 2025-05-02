@@ -162,7 +162,7 @@ export class User {
         console.log(this.name, 'getResult resultShares', resultShares);
         const result = getSecret(resultShares, PRIME);
         console.log(this.name, 'getResult success', result);
-        return result;
+        return result/ resultShares.length;
     }
     
   }

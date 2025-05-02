@@ -14,7 +14,7 @@
     </div>
     <div v-if="state == 'tallyDone'">
       <p>投票が終了しました</p>
-      <p>result: {{ result }}</p>
+      <h3>result: {{ result }}</h3>
     </div>
   </div>
 </template>
